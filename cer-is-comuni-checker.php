@@ -16,7 +16,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Plugin constants
-define('CER_COMUNI_VERSION', '1.0.0');
+define('CER_COMUNI_VERSION', '1.0.7-debug1');
 define('CER_COMUNI_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('CER_COMUNI_PLUGIN_URL', plugin_dir_url(__FILE__));
 
