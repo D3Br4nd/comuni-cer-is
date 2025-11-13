@@ -45,13 +45,12 @@ class CER_Comuni_Ajax {
         $result = $api->get_records(CER_COMUNI_TABLE_ID, [
             'limit' => 10,
             'where' => $where,
-            'fields' => 'nome-comune,codice-istat,provincia,regione,status'
+            'fields' => 'nome-comune,codice-istat'
         ]);
         
         if (is_wp_error($result)) {
             wp_send_json_error([
-                'message' => 'Errore API NocoDB: ' . $result->get_error_message(),
-                'debug_info' => $result->get_error_data()
+                'message' => 'Errore API NocoDB: ' . $result->get_error_message()
             ]);
         }
         
@@ -60,7 +59,7 @@ class CER_Comuni_Ajax {
             foreach ($result['list'] as $comune) {
                 $suggestions[] = [
                     'nome' => $comune['nome-comune'],
-                    'codice' => $comune['codice-istat']
+                    'codice' => isset($comune['codice-istat']) ? $comune['codice-istat'] : ''
                 ];
             }
         }
@@ -83,7 +82,7 @@ class CER_Comuni_Ajax {
         // Get NocoDB API
         $api = \NocoDB_Connector\NocoDB_Connector::get_api();
         
-        // Case-insensitive search using LIKE operator (more reliable than eq)
+        // Case-insensitive search using LIKE operator
         $where = sprintf("(nome-comune,like,'%s')", $comune_nome);
         
         $result = $api->get_records(CER_COMUNI_TABLE_ID, [
@@ -93,20 +92,28 @@ class CER_Comuni_Ajax {
         
         if (is_wp_error($result)) {
             wp_send_json_error([
-                'message' => 'Errore API NocoDB: ' . $result->get_error_message(),
-                'debug_info' => $result->get_error_data()
+                'message' => 'Errore API NocoDB: ' . $result->get_error_message()
             ]);
         }
         
         // Check if found
         if (isset($result['list']) && count($result['list']) > 0) {
             $comune_data = $result['list'][0];
-            $comune_status = isset($comune_data['status']) ? $comune_data['status'] : '';
-            $comune_provincia = isset($comune_data['provincia']) ? strtoupper($comune_data['provincia']) : '';
-            $comune_regione = isset($comune_data['regione']) ? $comune_data['regione'] : '';
+            
+            // Get fields with proper defaults
+            $comune_status = isset($comune_data['status']) ? trim(strtolower($comune_data['status'])) : '';
+            $comune_provincia = isset($comune_data['provincia']) ? strtoupper(trim($comune_data['provincia'])) : '';
+            $comune_regione = isset($comune_data['regione']) ? trim($comune_data['regione']) : '';
+
+            // DEBUG: Log what we received (you can check WordPress debug.log)
+            error_log('DEBUG Comune: ' . $comune_nome);
+            error_log('DEBUG Status: "' . $comune_status . '"');
+            error_log('DEBUG Provincia: "' . $comune_provincia . '"');
+            error_log('DEBUG Regione: "' . $comune_regione . '"');
+            error_log('DEBUG Full Data: ' . print_r($comune_data, true));
 
             $message = '';
-            $covered = true; // Assume covered if found in the list, then refine message
+            $covered = true;
 
             switch ($comune_status) {
                 case 'aperto':
@@ -115,6 +122,7 @@ class CER_Comuni_Ajax {
                         esc_html($comune_nome)
                     );
                     break;
+                    
                 case 'raccolta':
                     if (in_array($comune_provincia, ['AV', 'BN'])) {
                         $message = sprintf(
@@ -122,13 +130,13 @@ class CER_Comuni_Ajax {
                             esc_html($comune_nome)
                         );
                     } else {
-                        // Fallback for 'raccolta' status if not AV/BN, or if province is missing
                         $message = sprintf(
                             'Per <strong>%s</strong> si raccolgono segnalazioni per la Comunità Energetica.',
                             esc_html($comune_nome)
                         );
                     }
                     break;
+                    
                 case 'segnalazione':
                     if ($comune_regione === 'Campania') {
                         $message = sprintf(
@@ -136,7 +144,6 @@ class CER_Comuni_Ajax {
                             esc_html($comune_nome)
                         );
                     } else {
-                        // Fallback for 'segnalazione' status if not Campania, or if region is missing
                         $message = sprintf(
                             'Al momento non operiamo nella zona di <strong>%s</strong>. Puoi contattarci per valutarne l\'eventuale possibilità.',
                             esc_html($comune_nome)
@@ -144,8 +151,18 @@ class CER_Comuni_Ajax {
                         $covered = false;
                     }
                     break;
+                    
                 case 'non_operiamo':
+                    $message = sprintf(
+                        'Al momento non operiamo nella zona di <strong>%s</strong>. Puoi contattarci per valutarne l\'eventuale possibilità.',
+                        esc_html($comune_nome)
+                    );
+                    $covered = false;
+                    break;
+                    
                 default:
+                    // Se lo status non è riconosciuto, log it
+                    error_log('DEBUG: Status non riconosciuto: "' . $comune_status . '"');
                     $message = sprintf(
                         'Al momento non operiamo nella zona di <strong>%s</strong>. Puoi contattarci per valutarne l\'eventuale possibilità.',
                         esc_html($comune_nome)
@@ -157,10 +174,15 @@ class CER_Comuni_Ajax {
             wp_send_json_success([
                 'covered' => $covered,
                 'comune' => $comune_data,
-                'message' => $message
+                'message' => $message,
+                'debug' => [ // Temporary debug info
+                    'status' => $comune_status,
+                    'provincia' => $comune_provincia,
+                    'regione' => $comune_regione
+                ]
             ]);
         } else {
-            // Comune NOT found in our list, assume fuori regione
+            // Comune NOT found in list
             wp_send_json_success([
                 'covered' => false,
                 'message' => sprintf(
