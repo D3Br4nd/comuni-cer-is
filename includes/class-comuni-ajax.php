@@ -39,12 +39,11 @@ class CER_Comuni_Ajax {
         $api = \NocoDB_Connector\NocoDB_Connector::get_api();
         
         // Search comuni (case insensitive with LIKE)
-        $where = sprintf("(nome-comune,like,'%%%s%%')", $query);
+        $where = sprintf("(nome-comune,like,%%%s%%)", $query);
         
         $result = $api->get_records(CER_COMUNI_TABLE_ID, [
             'limit' => 10,
-            'where' => $where,
-            'fields' => 'nome-comune,codice-istat'
+            'where' => $where
         ]);
         
         if (is_wp_error($result)) {
@@ -81,8 +80,8 @@ class CER_Comuni_Ajax {
         // Get NocoDB API
         $api = \NocoDB_Connector\NocoDB_Connector::get_api();
         
-        // Case-insensitive search using LIKE operator
-        $where = sprintf("(nome-comune,like,'%s')", $comune_nome);
+        // Search with LIKE operator for flexible matching
+        $where = sprintf("(nome-comune,like,%%%s%%)", $comune_nome);
         
         $result = $api->get_records(CER_COMUNI_TABLE_ID, [
             'limit' => 1,
@@ -97,100 +96,32 @@ class CER_Comuni_Ajax {
         
         // Check if found
         if (isset($result['list']) && count($result['list']) > 0) {
+            // COMUNE TROVATO - Mostra messaggio positivo
             $comune_data = $result['list'][0];
+            $nome_comune = $comune_data['nome-comune'];
             
-            // Get fields with proper defaults
-            $comune_status = isset($comune_data['status']) ? trim(strtolower($comune_data['status'])) : 'NON_TROVATO';
-            $comune_provincia = isset($comune_data['provincia']) ? strtoupper(trim($comune_data['provincia'])) : 'N/A';
-            $comune_regione = isset($comune_data['regione']) ? trim($comune_data['regione']) : 'N/A';
-
-            // TEMPORARY DEBUG MESSAGE - mostra i dati ricevuti
-            $debug_info = sprintf(
-                '<br><br><small><strong>🔍 DEBUG INFO:</strong><br>' .
-                'Status DB: "%s"<br>' .
-                'Provincia: "%s"<br>' .
-                'Regione: "%s"<br>' .
-                'Campi disponibili: %s</small>',
-                esc_html($comune_status),
-                esc_html($comune_provincia),
-                esc_html($comune_regione),
-                esc_html(implode(', ', array_keys($comune_data)))
+            $message = sprintf(
+                'Ottimo! Il tuo comune <strong>%s</strong> è coperto dalla nostra Comunità Energetica.<br>' .
+                'Puoi procedere con l\'iscrizione cliccando sul pulsante qui sotto.',
+                esc_html($nome_comune)
             );
 
-            $message = '';
-            $covered = true;
-
-            switch ($comune_status) {
-                case 'aperto':
-                    $message = sprintf(
-                        'Ottimo! Per <strong>%s</strong> sono aperte le iscrizioni alla Comunità Energetica.',
-                        esc_html($comune_nome)
-                    );
-                    break;
-                    
-                case 'raccolta':
-                    if (in_array($comune_provincia, ['AV', 'BN'])) {
-                        $message = sprintf(
-                            'Per <strong>%s</strong> stiamo raccogliendo iscrizioni di produttori e consumatori per completare la configurazione di autoconsumo per quella cabina.',
-                            esc_html($comune_nome)
-                        );
-                    } else {
-                        $message = sprintf(
-                            'Per <strong>%s</strong> si raccolgono segnalazioni per la Comunità Energetica.',
-                            esc_html($comune_nome)
-                        );
-                    }
-                    break;
-                    
-                case 'segnalazione':
-                    if ($comune_regione === 'Campania') {
-                        $message = sprintf(
-                            'Per <strong>%s</strong> si raccolgono segnalazioni per la Comunità Energetica.',
-                            esc_html($comune_nome)
-                        );
-                    } else {
-                        $message = sprintf(
-                            'Al momento non operiamo nella zona di <strong>%s</strong>. Puoi contattarci per valutarne l\'eventuale possibilità.',
-                            esc_html($comune_nome)
-                        );
-                        $covered = false;
-                    }
-                    break;
-                    
-                case 'non_operiamo':
-                    $message = sprintf(
-                        'Al momento non operiamo nella zona di <strong>%s</strong>. Puoi contattarci per valutarne l\'eventuale possibilità.',
-                        esc_html($comune_nome)
-                    );
-                    $covered = false;
-                    break;
-                    
-                default:
-                    // Status non riconosciuto
-                    $message = sprintf(
-                        'Al momento non operiamo nella zona di <strong>%s</strong>. Puoi contattarci per valutarne l\'eventuale possibilità.',
-                        esc_html($comune_nome)
-                    );
-                    $covered = false;
-                    break;
-            }
-
-            // Aggiungi debug info al messaggio
-            $message .= $debug_info;
-
             wp_send_json_success([
-                'covered' => $covered,
+                'covered' => true,
                 'comune' => $comune_data,
                 'message' => $message
             ]);
         } else {
-            // Comune NOT found in list
+            // COMUNE NON TROVATO - Mostra form segnalazione
+            $message = sprintf(
+                'Al momento il tuo comune <strong>%s</strong> non è ancora parte della nostra rete, ma stiamo lavorando per espanderci!<br><br>' .
+                'Lasciaci i tuoi dati e ti contatteremo non appena sarà disponibile nella tua zona.',
+                esc_html($comune_nome)
+            );
+            
             wp_send_json_success([
                 'covered' => false,
-                'message' => sprintf(
-                    'Al momento non operiamo nella zona di <strong>%s</strong>. Puoi contattarci per valutarne l\'eventuale possibilità.',
-                    esc_html($comune_nome)
-                )
+                'message' => $message
             ]);
         }
     }

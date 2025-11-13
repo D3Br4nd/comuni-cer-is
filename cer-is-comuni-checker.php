@@ -3,7 +3,7 @@
  * Plugin Name: CER-IS Comuni Checker
  * Plugin URI: https://www.cer-is.com
  * Description: Form interattivo per verificare copertura comuni e segnalazioni
- * Version: 1.1.5
+ * Version: 1.1.7
  * Author: CER-IS
  * Author URI: https://www.cer-is.com
  * Requires Plugins: wp-nocodb-connector
