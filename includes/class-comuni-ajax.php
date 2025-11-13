@@ -40,7 +40,7 @@ class CER_Comuni_Ajax {
         
         // Search comuni (case insensitive with LIKE)
         // Using where filter: (nome-comune,like,%query%)
-        $where = sprintf('(nome-comune,like,%%%s%%)', strtolower($query));
+        $where = sprintf("(nome-comune,like,'%%%s%%')", strtolower($query));
         
         $result = $api->get_records(CER_COMUNI_TABLE_ID, [
             'limit' => 10,
@@ -50,7 +50,8 @@ class CER_Comuni_Ajax {
         
         if (is_wp_error($result)) {
             wp_send_json_error([
-                'message' => 'Errore nella ricerca: ' . $result->get_error_message()
+                'message' => 'Errore API NocoDB: ' . $result->get_error_message(),
+                'debug_info' => $result->get_error_data()
             ]);
         }
         
@@ -83,7 +84,7 @@ class CER_Comuni_Ajax {
         $api = \NocoDB_Connector\NocoDB_Connector::get_api();
         
         // Exact match search (case insensitive by lower-casing the input)
-        $where = sprintf('(nome-comune,eq,%s)', strtolower($comune_nome));
+        $where = sprintf("(nome-comune,eq,'%s')", strtolower($comune_nome));
         
         $result = $api->get_records(CER_COMUNI_TABLE_ID, [
             'limit' => 1,
@@ -92,7 +93,8 @@ class CER_Comuni_Ajax {
         
         if (is_wp_error($result)) {
             wp_send_json_error([
-                'message' => 'Errore nella verifica: ' . $result->get_error_message()
+                'message' => 'Errore API NocoDB: ' . $result->get_error_message(),
+                'debug_info' => $result->get_error_data()
             ]);
         }
         

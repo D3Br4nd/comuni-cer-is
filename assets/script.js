@@ -2,7 +2,8 @@
     'use strict';
     
     $(document).ready(function() {
-        
+        console.log("CER-IS Comuni Checker: Script loaded and document ready.");
+
         let searchTimeout;
         const $input = $('#cer-comune-input');
         const $searchBtn = $('#cer-comune-search-btn');
@@ -18,6 +19,7 @@
          * Autocomplete on input
          */
         $input.on('input', function() {
+            console.log("CER-IS Comuni Checker: Input event fired.");
             const query = $(this).val().trim();
             
             // Clear previous timeout
@@ -48,13 +50,18 @@
                     query: query
                 },
                 success: function(response) {
-                    if (response.success && response.data.suggestions.length > 0) {
+                    console.log('CER-IS Comuni Checker: Autocomplete response:', response);
+                    if (response.success && response.data && response.data.suggestions.length > 0) {
                         renderSuggestions(response.data.suggestions, query);
                     } else {
                         $suggestions.removeClass('active').empty();
+                        if (!response.success && response.data) {
+                            console.error('CER-IS Comuni Checker: Autocomplete Error:', response.data.message, response.data.debug_info || '(no debug info)');
+                        }
                     }
                 },
-                error: function() {
+                error: function(jqXHR, textStatus, errorThrown) {
+                    console.error('CER-IS Comuni Checker: Autocomplete AJAX Error:', textStatus, errorThrown);
                     $suggestions.removeClass('active').empty();
                 }
             });
@@ -100,6 +107,7 @@
          * Search button click
          */
         $searchBtn.on('click', function() {
+            console.log("CER-IS Comuni Checker: Search button clicked.");
             const comune = $input.val().trim();
             if (comune) {
                 searchComune(comune);
@@ -111,6 +119,7 @@
          */
         $input.on('keypress', function(e) {
             if (e.which === 13) {
+                console.log("CER-IS Comuni Checker: Enter key pressed.");
                 e.preventDefault();
                 $suggestions.removeClass('active');
                 const comune = $(this).val().trim();
@@ -139,6 +148,7 @@
                     comune: comune
                 },
                 success: function(response) {
+                    console.log('CER-IS Comuni Checker: Search response:', response);
                     if (response.success) {
                         if (response.data.covered) {
                             // Comune is covered!
@@ -150,10 +160,14 @@
                             $('#report-comune').val(comune);
                         }
                     } else {
-                        showErrorResult(response.data.message);
+                        if (response.data) {
+                            console.error('CER-IS Comuni Checker: Search Error:', response.data.message, response.data.debug_info || '(no debug info)');
+                        }
+                        showErrorResult(response.data ? response.data.message : cerComuniData.strings.error);
                     }
                 },
-                error: function() {
+                error: function(jqXHR, textStatus, errorThrown) {
+                    console.error('CER-IS Comuni Checker: Search AJAX Error:', textStatus, errorThrown);
                     showErrorResult(cerComuniData.strings.error);
                 },
                 complete: function() {
