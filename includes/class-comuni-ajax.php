@@ -39,7 +39,6 @@ class CER_Comuni_Ajax {
         $api = \NocoDB_Connector\NocoDB_Connector::get_api();
         
         // Search comuni (case insensitive with LIKE)
-        // Using where filter: (nome-comune,like,%query%)
         $where = sprintf("(nome-comune,like,'%%%s%%')", $query);
         
         $result = $api->get_records(CER_COMUNI_TABLE_ID, [
@@ -101,16 +100,22 @@ class CER_Comuni_Ajax {
             $comune_data = $result['list'][0];
             
             // Get fields with proper defaults
-            $comune_status = isset($comune_data['status']) ? trim(strtolower($comune_data['status'])) : '';
-            $comune_provincia = isset($comune_data['provincia']) ? strtoupper(trim($comune_data['provincia'])) : '';
-            $comune_regione = isset($comune_data['regione']) ? trim($comune_data['regione']) : '';
+            $comune_status = isset($comune_data['status']) ? trim(strtolower($comune_data['status'])) : 'NON_TROVATO';
+            $comune_provincia = isset($comune_data['provincia']) ? strtoupper(trim($comune_data['provincia'])) : 'N/A';
+            $comune_regione = isset($comune_data['regione']) ? trim($comune_data['regione']) : 'N/A';
 
-            // DEBUG: Log what we received (you can check WordPress debug.log)
-            error_log('DEBUG Comune: ' . $comune_nome);
-            error_log('DEBUG Status: "' . $comune_status . '"');
-            error_log('DEBUG Provincia: "' . $comune_provincia . '"');
-            error_log('DEBUG Regione: "' . $comune_regione . '"');
-            error_log('DEBUG Full Data: ' . print_r($comune_data, true));
+            // TEMPORARY DEBUG MESSAGE - mostra i dati ricevuti
+            $debug_info = sprintf(
+                '<br><br><small><strong>🔍 DEBUG INFO:</strong><br>' .
+                'Status DB: "%s"<br>' .
+                'Provincia: "%s"<br>' .
+                'Regione: "%s"<br>' .
+                'Campi disponibili: %s</small>',
+                esc_html($comune_status),
+                esc_html($comune_provincia),
+                esc_html($comune_regione),
+                esc_html(implode(', ', array_keys($comune_data)))
+            );
 
             $message = '';
             $covered = true;
@@ -161,8 +166,7 @@ class CER_Comuni_Ajax {
                     break;
                     
                 default:
-                    // Se lo status non è riconosciuto, log it
-                    error_log('DEBUG: Status non riconosciuto: "' . $comune_status . '"');
+                    // Status non riconosciuto
                     $message = sprintf(
                         'Al momento non operiamo nella zona di <strong>%s</strong>. Puoi contattarci per valutarne l\'eventuale possibilità.',
                         esc_html($comune_nome)
@@ -171,15 +175,13 @@ class CER_Comuni_Ajax {
                     break;
             }
 
+            // Aggiungi debug info al messaggio
+            $message .= $debug_info;
+
             wp_send_json_success([
                 'covered' => $covered,
                 'comune' => $comune_data,
-                'message' => $message,
-                'debug' => [ // Temporary debug info
-                    'status' => $comune_status,
-                    'provincia' => $comune_provincia,
-                    'regione' => $comune_regione
-                ]
+                'message' => $message
             ]);
         } else {
             // Comune NOT found in list
