@@ -40,7 +40,7 @@ class CER_Comuni_Ajax {
         
         // Search comuni (case insensitive with LIKE)
         // Using where filter: (nome-comune,like,%query%)
-        $where = sprintf('(nome-comune,like,%%%s%%)', ucwords(strtolower($query)));
+        $where = sprintf('(nome-comune,like,%%%s%%)', strtolower($query));
         
         $result = $api->get_records(CER_COMUNI_TABLE_ID, [
             'limit' => 10,
@@ -82,8 +82,8 @@ class CER_Comuni_Ajax {
         // Get NocoDB API
         $api = \NocoDB_Connector\NocoDB_Connector::get_api();
         
-        // Exact match search (case insensitive by proper-casing the input)
-        $where = sprintf('(nome-comune,like,%s)', ucwords(strtolower($comune_nome)));
+        // Exact match search (case insensitive by lower-casing the input)
+        $where = sprintf('(nome-comune,eq,%s)', strtolower($comune_nome));
         
         $result = $api->get_records(CER_COMUNI_TABLE_ID, [
             'limit' => 1,
